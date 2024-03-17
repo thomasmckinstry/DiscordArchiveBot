@@ -2,6 +2,7 @@ from ast import arg
 import discord
 import requests
 import urllib.request
+import os
 
 from discord.ext import commands
 
@@ -13,6 +14,7 @@ videoArr = [".webm", ".mp4"]
 @bot.event
 async def on_ready():
     print("bot is online")
+    set_directories("Images", "Videos")
 
 @bot.command()
 async def archiveDocs(ctx):
@@ -113,6 +115,19 @@ async def archiveDocs(ctx):
 
     await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
     await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)          
+
+"""
+Given parameters for directory names, checks if directories exist.
+Will be used to ensure directories are correct upon runtime, and when archiveDocs is called
+in a channel.
+"""
+def set_directories(*args):
+    files = os.listdir()
+    for dir in args:
+        if (not files.count(dir)):
+            os.mkdir(dir)
+    
+
 
 def getFileType(filename):
     extensionStr = ""
