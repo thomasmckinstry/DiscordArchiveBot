@@ -1,5 +1,5 @@
 from ast import arg
-import discordpi
+import discord
 import requests
 import urllib.request
 
