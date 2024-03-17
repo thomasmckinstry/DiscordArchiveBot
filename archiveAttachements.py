@@ -2,6 +2,7 @@ from ast import arg
 import discord
 import requests
 import urllib.request
+import datetime
 import os
 
 from discord.ext import commands
@@ -19,7 +20,9 @@ async def on_ready():
 
 #Archive files out of the channel the command was sent in.
 @bot.command()
-async def archiveDocs(ctx):
+async def archiveDocs(ctx, *args):
+    parsedArgs = parseArgs(args)
+    print(parsedArgs)
     channel = ctx.channel.name
     set_directories(channel, channel + "/Images", channel + "/Videos")
 
@@ -35,7 +38,7 @@ async def archiveDocs(ctx):
     failedVideos = ""
 
     #Loops through each message sent in the channel
-    async for message in ctx.channel.history(limit=None, before=None, after=None, around=None, oldest_first=True):
+    async for message in ctx.channel.history(limit=None, before=parsedArgs["E"], after=parsedArgs["S"], around=None, oldest_first=True):
 
         count += 1
 
@@ -53,7 +56,7 @@ async def archiveDocs(ctx):
                         image += 1
                     except:
                         failedImage += 1
-                        failedImages += filename + message.jump_url + "\n"
+                        failedImages += filename + " " + message.jump_url + "\n"
                         continue
 
                 if fileType in videoArr:
@@ -64,7 +67,7 @@ async def archiveDocs(ctx):
                         video += 1
                     except:
                         failedVideo += 1
-                        failedVideos += filename + message.jump_url + "\n"
+                        failedVideos += filename + " " + message.jump_url + "\n"
                         continue
         
         #Loop through and save embeds (Some older embeds do not work)
@@ -92,7 +95,7 @@ async def archiveDocs(ctx):
 
                     except:
                         failedImage += 1
-                        failedImages += filename + message.jump_url + "\n"
+                        failedImages += filename + " " + message.jump_url + "\n"
                         continue
 
                 if (extensionStr in videoArr):
@@ -112,7 +115,7 @@ async def archiveDocs(ctx):
 
                     except:
                         failedVideo += 1
-                        failedVideos += filename + message.jump_url + "\n"
+                        failedVideos += filename + " " + message.jump_url + "\n"
                         continue
         
     #Give specs on saved files                    
@@ -159,6 +162,31 @@ def getFileType(filename):
                 extensionStr = filename[j : j+6]
                 #print(extensionStr)
                 return extensionStr
+
+"""
+Gives a dictionary containing arguments mapped to keys
+Parameter: Array of arguments
+Returns: Dictionary
+"""         
+def parseArgs(args):
+    dict = {"I" : None, "V" : None, "S" : None, "E" : None}
+    for par in args:
+        print(par.strip("-S").split("-"))
+        if par[1] == "I":
+            dict["I"] = True
+        elif par[1] == "V":
+            dict["V"] = True
+        elif par[1] == "S":
+            startArr = par.strip("-S").split("-")
+            startDate = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
+            dict["S"] = startDate
+        elif par[1] == "E":
+            endArr = par.strip("-E").split("-")
+            endDate = datetime.datetime(endArr[0], endArr[1], endArr[2])
+            dict["E"] = endDate
+        return dict
+
+
 
 bot.run("MTA5NDY5ODQ0NzkwMDI1NDI0MA.GJF1pn.sjfXhY0ZKluDXXatO6WVx-y364hT5SjlD_1mK4")
 
