@@ -6,19 +6,23 @@ import os
 
 from discord.ext import commands
 
+#Setup
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 imageArr = [".jpg", ".jpeg", ".png"]
 #soundArr = [".wav", ".mp3", ".ogg"]
 videoArr = [".webm", ".mp4"]
 
+#Creates starter directories and confirms bot launch
 @bot.event
 async def on_ready():
     print("bot is online")
-    set_directories("Images", "Videos")
 
+#Archive files out of the channel the command was sent in.
 @bot.command()
 async def archiveDocs(ctx):
-    print()
+    channel = ctx.channel.name
+    set_directories(channel, channel + "/Images", channel + "/Videos")
+
     image = 0
     video = 0
     sound = 0
@@ -27,108 +31,120 @@ async def archiveDocs(ctx):
     failedImage = 0
     failedVideo = 0
 
+    failedImages = ""
+    failedVideos = ""
+
+    #Loops through each message sent in the channel
     async for message in ctx.channel.history(limit=None, before=None, after=None, around=None, oldest_first=True):
 
         count += 1
-        #print(count)
 
+        #Loop through and save attachments
         if len(message.attachments) > 0:
             for i in message.attachments:
 
                 fileType = getFileType(i.filename)
-                #print(fileType)
 
                 if fileType in imageArr:
-                    #print("In image if")
-                    filename = str(image) + message.created_at.strftime('%d %b %y') + fileType
-                    image += 1
-                    await i.save(f'Image/' + ctx.channel.name  +"/" + filename)
-                    #print("saved Image" + str(image))
+                    try:
+                        dirPath = channel + "/Images/"
+                        filename = str(image) + " " + message.created_at.strftime('%d %b %y') + fileType
+                        await i.save(f'' + dirPath + filename)
+                        image += 1
+                    except:
+                        failedImage += 1
+                        failedImages += filename + message.jump_url + "\n"
+                        continue
 
                 if fileType in videoArr:
-                    #print("hit video")
-                    filename = str(video) + message.created_at.strftime('%d %b %y') + fileType
-                    video += 1
-                    await i.save(f'Video/' + ctx.channel.name + "/" + filename)
-                    #print("saved Video" + str(video))
-                    
+                    try:
+                        dirPath = channel + "/Videos/"
+                        filename = str(video) + " " + message.created_at.strftime('%d %b %y') + fileType
+                        await i.save(f'' + dirPath + filename)
+                        video += 1
+                    except:
+                        failedVideo += 1
+                        failedVideos += filename + message.jump_url + "\n"
+                        continue
+        
+        #Loop through and save embeds (Some older embeds do not work)
         if message.embeds: 
-            #print("hit embeds")  
             for i in message.embeds:
-                #print("hit embeds loop 1")
+
                 extensionStr = getFileType(i.url)
-                
-                #print(i.url + " url")
-                #print(extensionStr + " extension")
 
                 url = i.url
 
-                #print(url)
-
                 if (extensionStr in imageArr):
-                    filename = str(image) + message.channel.name + message.created_at.strftime('%d %b %y') + extensionStr
+                    filename = str(image) + " " + message.created_at.strftime('%d %b %y') + extensionStr
+                    dirPath = channel + "/Images/"
 
                     try:
-                        #print("Image try")
                         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
                         response = urllib.request.urlopen(req)
 
                         imageFile = response.read()
 
-                        with open('Image/' + filename, 'wb') as f:
+                        with open(dirPath + filename, 'wb') as f:
                             f.write(imageFile)
-                            #print("saved embedded Image" + str(image))
 
                         image += 1
 
                     except:
-                        #print("Image " + filename + " failed to save")
                         failedImage += 1
+                        failedImages += filename + message.jump_url + "\n"
                         continue
 
                 if (extensionStr in videoArr):
-                    #print("hit video if")
-                    #print(url)
+                    filename = str(video) + " " + message.created_at.strftime('%d %b %y') + extensionStr
+                    dirPath = channel + "/Videos/"
 
-                    filename = str(video) + message.channel.name + message.created_at.strftime('%d %b %y') + extensionStr
                     try:
                         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
                         response = urllib.request.urlopen(req)
 
                         videoFile = response.read()
 
-                        with open('Video/' + filename, 'wb') as f:
+                        with open(dirPath + filename, 'wb') as f:
                             f.write(videoFile)
 
-                            video += 1
+                        video += 1
 
                     except:
-                        #print("Video " + filename + " failed to save")
                         failedVideo += 1
+                        failedVideos += filename + message.jump_url + "\n"
                         continue
-
-                    #urllib.request.urlopen("https://www.youtube.com/")
-
+        
+    #Give specs on saved files                    
     await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
     await message.channel.send("Saved " + str(image) + " images", delete_after=20.0)
     await message.channel.send(str(count) + " Messages were scanned", delete_after=20.0)  
 
     await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
-    await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)          
+    await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
+
+    with open(channel + "/Videos/failedVideos.txt", 'w') as f:
+        f.write(failedVideos)  
+
+    with open(channel + "/Images/failedImages.txt", 'w') as f:
+        f.write(failedImages)     
 
 """
-Given parameters for directory names, checks if directories exist.
-Will be used to ensure directories are correct upon runtime, and when archiveDocs is called
-in a channel.
+Checks for and creates directories with given Strings.
+Parameter: Any Strings
+Returns: Null
 """
 def set_directories(*args):
     files = os.listdir()
-    for dir in args:
-        if (not files.count(dir)):
+    if (not files.count(args[0])):
+        for dir in args:
             os.mkdir(dir)
     
-
-
+"""
+Returns a substring of a filename to decide if a file is a video or image.
+Parameter: Filename String
+Returns: File Extension String
+"""
 def getFileType(filename):
     extensionStr = ""
     for j in range(len(filename) - 4, 0, -1):
