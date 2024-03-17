@@ -13,6 +13,17 @@ imageArr = [".jpg", ".jpeg", ".png"]
 #soundArr = [".wav", ".mp3", ".ogg"]
 videoArr = [".webm", ".mp4"]
 
+image = 0
+video = 0
+sound = 0
+
+count = 0
+failedImage = 0
+failedVideo = 0
+
+failedImages = ""
+failedVideos = ""
+
 #Creates starter directories and confirms bot launch
 @bot.event
 async def on_ready():
@@ -22,7 +33,7 @@ async def on_ready():
 @bot.command()
 async def archiveDocs(ctx, *args):
     parsedArgs = parseArgs(args)
-    print(parsedArgs)
+    #print(parsedArgs)
     channel = ctx.channel.name
     set_directories(channel, channel + "/Images", channel + "/Videos")
 
@@ -44,6 +55,8 @@ async def archiveDocs(ctx, *args):
 
         #Loop through and save attachments
         if len(message.attachments) > 0:
+            await getAttachments(message, channel, parsedArgs)
+            """
             for i in message.attachments:
 
                 fileType = getFileType(i.filename)
@@ -69,9 +82,12 @@ async def archiveDocs(ctx, *args):
                         failedVideo += 1
                         failedVideos += filename + " " + message.jump_url + "\n"
                         continue
+                """
         
         #Loop through and save embeds (Some older embeds do not work)
         if message.embeds: 
+            await getEmbeds(message, channel, parsedArgs)
+            """
             for i in message.embeds:
 
                 extensionStr = getFileType(i.url)
@@ -116,7 +132,7 @@ async def archiveDocs(ctx, *args):
                     except:
                         failedVideo += 1
                         failedVideos += filename + " " + message.jump_url + "\n"
-                        continue
+                        continue"""
         
     #Give specs on saved files                    
     await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
@@ -131,6 +147,79 @@ async def archiveDocs(ctx, *args):
 
     with open(channel + "/Images/failedImages.txt", 'w') as f:
         f.write(failedImages)     
+
+async def getAttachments(msg, channel, dict):
+    for i in msg.attachments:
+            fileType = getFileType(i.filename)
+
+            if fileType in imageArr:
+                try:
+                    dirPath = channel + "/Images/"
+                    filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + fileType
+                    await i.save(f'' + dirPath + filename)
+                    image += 1
+                except:
+                    failedImage += 1
+                    failedImages += filename + " " + msg.jump_url + "\n"
+                    continue
+
+            if fileType in videoArr:
+                try:
+                    dirPath = channel + "/Videos/"
+                    filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + fileType
+                    await i.save(f'' + dirPath + filename)
+                    video += 1
+                except:
+                    failedVideo += 1
+                    failedVideos += filename + " " + msg.jump_url + "\n"
+                    continue
+
+async def getEmbeds(msg, channel, dict):
+    for i in msg.embeds:
+
+                extensionStr = getFileType(i.url)
+
+                url = i.url
+
+                if (extensionStr in imageArr):
+                    filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
+                    dirPath = channel + "/Images/"
+
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                        response = urllib.request.urlopen(req)
+
+                        imageFile = response.read()
+
+                        with open(dirPath + filename, 'wb') as f:
+                            f.write(imageFile)
+
+                        image += 1
+
+                    except:
+                        failedImage += 1
+                        failedImages += filename + " " + msg.jump_url + "\n"
+                        continue
+
+                if (extensionStr in videoArr):
+                    filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
+                    dirPath = channel + "/Videos/"
+
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                        response = urllib.request.urlopen(req)
+
+                        videoFile = response.read()
+
+                        with open(dirPath + filename, 'wb') as f:
+                            f.write(videoFile)
+
+                        video += 1
+
+                    except:
+                        failedVideo += 1
+                        failedVideos += filename + " " + msg.jump_url + "\n"
+                        continue
 
 """
 Checks for and creates directories with given Strings.
@@ -169,13 +258,14 @@ Parameter: Array of arguments
 Returns: Dictionary
 """         
 def parseArgs(args):
-    dict = {"I" : None, "V" : None, "S" : None, "E" : None}
+    dict = {"I" : None, "V" : None, "S" : None, "E" : None, "T" : None}
     for par in args:
-        print(par.strip("-S").split("-"))
         if par[1] == "I":
             dict["I"] = True
         elif par[1] == "V":
             dict["V"] = True
+        elif par[1] == "T":
+            dict["T"] = True
         elif par[1] == "S":
             startArr = par.strip("-S").split("-")
             startDate = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
@@ -184,7 +274,7 @@ def parseArgs(args):
             endArr = par.strip("-E").split("-")
             endDate = datetime.datetime(endArr[0], endArr[1], endArr[2])
             dict["E"] = endDate
-        return dict
+    return dict
 
 
 
