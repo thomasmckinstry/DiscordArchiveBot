@@ -142,39 +142,43 @@ async def archiveDocs(ctx, *args):
     await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
     await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
 
-    with open(channel + "/Videos/failedVideos.txt", 'w') as f:
-        f.write(failedVideos)  
+    # with open(channel + "/Videos/failedVideos.txt", 'w') as f:
+    #     f.write(failedVideos)  
 
-    with open(channel + "/Images/failedImages.txt", 'w') as f:
-        f.write(failedImages)     
+    # with open(channel + "/Images/failedImages.txt", 'w') as f:
+    #     f.write(failedImages)     
 
 async def getAttachments(msg, channel, dict):
+    global image
+    global video
     for i in msg.attachments:
             fileType = getFileType(i.filename)
 
             if fileType in imageArr:
+                filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + fileType
                 try:
                     dirPath = channel + "/Images/"
-                    filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + fileType
                     await i.save(f'' + dirPath + filename)
                     image += 1
                 except:
-                    failedImage += 1
-                    failedImages += filename + " " + msg.jump_url + "\n"
+                    with open(channel + "/Images/failedImages.txt", 'w') as f:
+                        f.write(filename + " " + msg.jump_url + "\n") 
                     continue
 
             if fileType in videoArr:
+                filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + fileType
                 try:
                     dirPath = channel + "/Videos/"
-                    filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + fileType
                     await i.save(f'' + dirPath + filename)
                     video += 1
                 except:
-                    failedVideo += 1
-                    failedVideos += filename + " " + msg.jump_url + "\n"
+                    with open(channel + "/Videos/failedVideos.txt", 'w') as f:
+                        f.write(filename + " " + msg.jump_url + "\n")  
                     continue
 
 async def getEmbeds(msg, channel, dict):
+    global image
+    global video
     for i in msg.embeds:
 
                 extensionStr = getFileType(i.url)
@@ -197,8 +201,8 @@ async def getEmbeds(msg, channel, dict):
                         image += 1
 
                     except:
-                        failedImage += 1
-                        failedImages += filename + " " + msg.jump_url + "\n"
+                        with open(channel + "/Images/failedImages.txt", 'w') as f:
+                            f.write(filename + " " + msg.jump_url + "\n") 
                         continue
 
                 if (extensionStr in videoArr):
@@ -217,8 +221,8 @@ async def getEmbeds(msg, channel, dict):
                         video += 1
 
                     except:
-                        failedVideo += 1
-                        failedVideos += filename + " " + msg.jump_url + "\n"
+                        with open(channel + "/Videos/failedVideos.txt", 'w') as f:
+                            f.write(filename + " " + msg.jump_url + "\n")  
                         continue
 
 """
