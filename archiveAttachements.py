@@ -1,5 +1,5 @@
 from ast import arg
-import discord
+import discordpi
 import requests
 import urllib.request
 
@@ -89,21 +89,21 @@ async def archiveDocs(ctx):
                     #print(url)
 
                     filename = str(video) + message.channel.name + message.created_at.strftime('%d %b %y') + extensionStr
-                    #try:
-                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    response = urllib.request.urlopen(req)
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                        response = urllib.request.urlopen(req)
 
-                    videoFile = response.read()
+                        videoFile = response.read()
 
-                    with open('Video/' + filename, 'wb') as f:
-                        f.write(videoFile)
+                        with open('Video/' + filename, 'wb') as f:
+                            f.write(videoFile)
 
-                        video += 1
+                            video += 1
 
-                    #except:
+                    except:
                         #print("Video " + filename + " failed to save")
-                        #failedVideo += 1
-                        #continue
+                        failedVideo += 1
+                        continue
 
                     #urllib.request.urlopen("https://www.youtube.com/")
 
