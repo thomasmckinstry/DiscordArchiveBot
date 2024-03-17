@@ -36,14 +36,16 @@ async def archiveDocs(ctx, *args):
     #print(parsedArgs)
     channel = ctx.channel.name
     set_directories(channel, channel + "/Images", channel + "/Videos")
+    with open(channel + "/Videos/failedVideos.txt", 'a') as f:
+        f.write("")  
+    with open(channel + "/Images/failedImages.txt", 'a') as f:
+        f.write("")  
 
-    image = 0
-    video = 0
-    sound = 0
-
-    count = 0
-    failedImage = 0
-    failedVideo = 0
+    global image
+    global video
+    global count
+    global failedImage
+    global failedVideo
 
     failedImages = ""
     failedVideos = ""
@@ -149,43 +151,55 @@ async def archiveDocs(ctx, *args):
     #     f.write(failedImages)     
 
 async def getAttachments(msg, channel, dict):
+
     global image
     global video
+    global count
+    global failedImage
+    global failedVideo
+
     for i in msg.attachments:
             fileType = getFileType(i.filename)
 
-            if fileType in imageArr:
+            if fileType in imageArr and dict["I"] == True:
                 filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + fileType
                 try:
                     dirPath = channel + "/Images/"
                     await i.save(f'' + dirPath + filename)
                     image += 1
                 except:
-                    with open(channel + "/Images/failedImages.txt", 'w') as f:
-                        f.write(filename + " " + msg.jump_url + "\n") 
+                    with open(channel + "/Images/failedImages.txt", 'a') as f:
+                        f.write(filename + " - " + msg.jump_url + "\n") 
+                    failedImage += 1
                     continue
 
-            if fileType in videoArr:
+            if fileType in videoArr and dict["V"] == True:
                 filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + fileType
                 try:
                     dirPath = channel + "/Videos/"
                     await i.save(f'' + dirPath + filename)
                     video += 1
                 except:
-                    with open(channel + "/Videos/failedVideos.txt", 'w') as f:
-                        f.write(filename + " " + msg.jump_url + "\n")  
+                    with open(channel + "/Videos/failedVideos.txt", 'a') as f:
+                        f.write(filename + " - " + msg.jump_url + "\n")  
+                    failedVideo += 1
                     continue
 
 async def getEmbeds(msg, channel, dict):
+
     global image
     global video
+    global count
+    global failedImage
+    global failedVideo
+
     for i in msg.embeds:
 
                 extensionStr = getFileType(i.url)
 
                 url = i.url
 
-                if (extensionStr in imageArr):
+                if (extensionStr in imageArr) and dict["I"] == True:
                     filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
                     dirPath = channel + "/Images/"
 
@@ -200,12 +214,13 @@ async def getEmbeds(msg, channel, dict):
 
                         image += 1
 
-                    except:
-                        with open(channel + "/Images/failedImages.txt", 'w') as f:
-                            f.write(filename + " " + msg.jump_url + "\n") 
+                    except Exception as error:
+                        with open(channel + "/Images/failedImages.txt", 'a') as f:
+                            f.write(filename + " - " + msg.jump_url + "\n") 
+                        failedImage += 1
                         continue
 
-                if (extensionStr in videoArr):
+                if (extensionStr in videoArr) and dict["V"] == True:
                     filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
                     dirPath = channel + "/Videos/"
 
@@ -221,8 +236,9 @@ async def getEmbeds(msg, channel, dict):
                         video += 1
 
                     except:
-                        with open(channel + "/Videos/failedVideos.txt", 'w') as f:
-                            f.write(filename + " " + msg.jump_url + "\n")  
+                        with open(channel + "/Videos/failedVideos.txt", 'a') as f:
+                            f.write(filename + " - " + msg.jump_url + "\n")  
+                        failedVideo += 1
                         continue
 
 """
