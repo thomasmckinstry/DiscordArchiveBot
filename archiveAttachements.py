@@ -37,16 +37,15 @@ async def on_ready():
 #Archive files out of the channel the command was sent in.
 @bot.command()
 async def archiveDocs(ctx, *args):
-    parsedArgs = parseArgs(args)
-    #print(parsedArgs)
     channel = ctx.channel.name
+    parsedArgs = parseArgs(args, datesDict[channel])
+    #print(parsedArgs)
+    datesDict[channel] = parsedArgs["E"]
     set_directories(channel, channel + "/Images", channel + "/Videos")
     with open(channel + "/Videos/failedVideos.txt", 'a') as f:
         f.write("")  
     with open(channel + "/Images/failedImages.txt", 'a') as f:
         f.write("")  
-    with open("backupRecord.csv", 'a') as f:
-        f.write(channel + ", " + str(parsedArgs["E"]) + "\n")
 
     global image
     global video
@@ -75,6 +74,8 @@ async def archiveDocs(ctx, *args):
 
     await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
     await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
+
+    setup.writeDates(datesDict)
 
     # with open(channel + "/Videos/failedVideos.txt", 'w') as f:
     #     f.write(failedVideos)  
@@ -132,7 +133,7 @@ async def getEmbeds(msg, channel, dict):
                     continue
 
                 url = i.url
-                print(url)
+                #print(url)
 
                 if (extensionStr in imageArr) and dict["I"] == True:
                     filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
@@ -209,12 +210,16 @@ def getFileType(filename):
 
 """
 Gives a dictionary containing arguments mapped to keys
-Parameter: Array of arguments
+Parameter: Array of arguments (Dates of form '-EYYYY-MM-DD)
 Returns: Dictionary
 """         
-def parseArgs(args):
-    dict = {"I" : True, "V" : True, "S" : None, "E" : datetime.datetime.today(), "T" : True}
+def parseArgs(args, start):
+    print("parsingArgs")
+    startArr = start.strip("0:").split("-")
+    startDatetime = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
+    dict = {"I" : True, "V" : True, "S" : startDatetime, "E" : datetime.datetime.today(), "T" : True}
     for par in args:
+        #print(par)
         if par[1] == "I":
             dict["I"] = True
         elif par[1] == "V":
@@ -227,7 +232,9 @@ def parseArgs(args):
             dict["S"] = startDate
         elif par[1] == "E":
             endArr = par.strip("-E").split("-")
-            endDate = datetime.datetime(endArr[0], endArr[1], endArr[2])
+            #print(endArr)
+            endDate = datetime.datetime(int(endArr[0]), int(endArr[1]), int(endArr[2]))
+            #print(endDate)
             dict["E"] = endDate
     return dict
 
