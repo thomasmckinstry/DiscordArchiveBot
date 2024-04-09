@@ -1,5 +1,5 @@
 from ast import arg
-import setup
+import records
 import discord
 import requests
 import urllib.request
@@ -12,9 +12,9 @@ from discord.ext import commands
 setup = setup.setup()
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
-imageArr = [".jpg", ".jpeg", ".png"]
+imageArr = [".jpg", ".jpeg", ".png", ".webp"]
 #soundArr = [".wav", ".mp3", ".ogg"]
-videoArr = [".webm", ".mp4"]
+videoArr = [".webm", ".mp4", ".mov"]
 
 image = 0
 video = 0
@@ -38,7 +38,7 @@ async def on_ready():
 @bot.command()
 async def archiveDocs(ctx, *args):
     channel = ctx.channel.name
-    parsedArgs = parseArgs(args, datesDict[channel])
+    parsedArgs = parseArgs(args, datesDict, channel)
     #print(parsedArgs)
     datesDict[channel] = parsedArgs["E"]
     set_directories(channel, channel + "/Images", channel + "/Videos")
@@ -59,13 +59,16 @@ async def archiveDocs(ctx, *args):
     #Loops through each message sent in the channel
     #print(parsedArgs)
     async for message in ctx.channel.history(limit=None, before=parsedArgs["E"], after=parsedArgs["S"], around=None, oldest_first=True):
-
+        #print(message.attachments, message.embeds)
         count += 1
 
         #Loop through and save attachments
         if len(message.attachments) > 0:
             #print("Found attachments")
             await getAttachments(message, channel, parsedArgs)
+
+        if len(message.embeds) > 0:
+            await getEmbeds(message, channel, parsedArgs)
         
     #Give specs on saved files                    
     await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
@@ -84,6 +87,7 @@ async def archiveDocs(ctx, *args):
     #     f.write(failedImages)     
 
 async def getAttachments(msg, channel, dict):
+    #print("getting attachments")
 
     global image
     global video
@@ -127,15 +131,12 @@ async def getEmbeds(msg, channel, dict):
     global failedVideo
 
     for i in msg.embeds:
-                try:
-                    extensionStr = getFileType(i.url)
-                except:
-                    continue
-
-                url = i.url
-                #print(url)
+                    
+                extensionStr = getFileType(i.url)
 
                 if (extensionStr in imageArr) and dict["I"] == True:
+                    url = i.image.url
+                    #print("recognized embedded image")
                     filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
                     dirPath = channel + "/Images/"
 
@@ -157,6 +158,7 @@ async def getEmbeds(msg, channel, dict):
                         continue
 
                 if (extensionStr in videoArr) and dict["V"] == True:
+                    url = i.video.url
                     filename = str(video) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
                     dirPath = channel + "/Videos/"
 
@@ -195,28 +197,22 @@ Returns: File Extension String
 """
 def getFileType(filename):
     extensionStr = ""
-    for j in range(len(filename) - 4, 0, -1):
-                    
-        if filename[j : j+4] in imageArr or filename[j : j+4] in videoArr:
-            extensionStr = filename[j : j+4]
-            #print(extensionStr)
-            return extensionStr
-
-        if j <= len(filename)-5:
-            if filename[j : j+6] in imageArr or filename[j : j+6] in videoArr:
-                extensionStr = filename[j : j+6]
-                #print(extensionStr)
-                return extensionStr
+    for ext in (imageArr + videoArr):
+        if ext in filename:
+            return ext
 
 """
 Gives a dictionary containing arguments mapped to keys
 Parameter: Array of arguments (Dates of form '-EYYYY-MM-DD)
 Returns: Dictionary
 """         
-def parseArgs(args, start):
-    print("parsingArgs")
-    startArr = start.strip("0:").split("-")
-    startDatetime = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
+def parseArgs(args, datesDict, channel):
+    #print("parsingArgs")
+    try:
+        startArr = datesDict[channel].strip("0:").split("-")
+        startDatetime = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
+    except:
+        startDatetime = None
     dict = {"I" : True, "V" : True, "S" : startDatetime, "E" : datetime.datetime.today(), "T" : True}
     for par in args:
         #print(par)
