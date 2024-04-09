@@ -1,4 +1,5 @@
 from ast import arg
+import setup
 import discord
 import requests
 import urllib.request
@@ -8,6 +9,8 @@ import os
 from discord.ext import commands
 
 #Setup
+setup = setup.setup()
+
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 imageArr = [".jpg", ".jpeg", ".png"]
 #soundArr = [".wav", ".mp3", ".ogg"]
@@ -23,6 +26,8 @@ failedVideo = 0
 
 failedImages = ""
 failedVideos = ""
+
+datesDict = setup.readDates()
 
 #Creates starter directories and confirms bot launch
 @bot.event
@@ -40,6 +45,8 @@ async def archiveDocs(ctx, *args):
         f.write("")  
     with open(channel + "/Images/failedImages.txt", 'a') as f:
         f.write("")  
+    with open("backupRecord.csv", 'a') as f:
+        f.write(channel + ", " + str(parsedArgs["E"]) + "\n")
 
     global image
     global video
@@ -51,90 +58,15 @@ async def archiveDocs(ctx, *args):
     failedVideos = ""
 
     #Loops through each message sent in the channel
+    #print(parsedArgs)
     async for message in ctx.channel.history(limit=None, before=parsedArgs["E"], after=parsedArgs["S"], around=None, oldest_first=True):
 
         count += 1
 
         #Loop through and save attachments
         if len(message.attachments) > 0:
+            #print("Found attachments")
             await getAttachments(message, channel, parsedArgs)
-            """
-            for i in message.attachments:
-
-                fileType = getFileType(i.filename)
-
-                if fileType in imageArr:
-                    try:
-                        dirPath = channel + "/Images/"
-                        filename = str(image) + " " + message.created_at.strftime('%d %b %y') + fileType
-                        await i.save(f'' + dirPath + filename)
-                        image += 1
-                    except:
-                        failedImage += 1
-                        failedImages += filename + " " + message.jump_url + "\n"
-                        continue
-
-                if fileType in videoArr:
-                    try:
-                        dirPath = channel + "/Videos/"
-                        filename = str(video) + " " + message.created_at.strftime('%d %b %y') + fileType
-                        await i.save(f'' + dirPath + filename)
-                        video += 1
-                    except:
-                        failedVideo += 1
-                        failedVideos += filename + " " + message.jump_url + "\n"
-                        continue
-                """
-        
-        #Loop through and save embeds (Some older embeds do not work)
-        if message.embeds: 
-            await getEmbeds(message, channel, parsedArgs)
-            """
-            for i in message.embeds:
-
-                extensionStr = getFileType(i.url)
-
-                url = i.url
-
-                if (extensionStr in imageArr):
-                    filename = str(image) + " " + message.created_at.strftime('%d %b %y') + extensionStr
-                    dirPath = channel + "/Images/"
-
-                    try:
-                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                        response = urllib.request.urlopen(req)
-
-                        imageFile = response.read()
-
-                        with open(dirPath + filename, 'wb') as f:
-                            f.write(imageFile)
-
-                        image += 1
-
-                    except:
-                        failedImage += 1
-                        failedImages += filename + " " + message.jump_url + "\n"
-                        continue
-
-                if (extensionStr in videoArr):
-                    filename = str(video) + " " + message.created_at.strftime('%d %b %y') + extensionStr
-                    dirPath = channel + "/Videos/"
-
-                    try:
-                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                        response = urllib.request.urlopen(req)
-
-                        videoFile = response.read()
-
-                        with open(dirPath + filename, 'wb') as f:
-                            f.write(videoFile)
-
-                        video += 1
-
-                    except:
-                        failedVideo += 1
-                        failedVideos += filename + " " + message.jump_url + "\n"
-                        continue"""
         
     #Give specs on saved files                    
     await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
@@ -194,10 +126,13 @@ async def getEmbeds(msg, channel, dict):
     global failedVideo
 
     for i in msg.embeds:
-
-                extensionStr = getFileType(i.url)
+                try:
+                    extensionStr = getFileType(i.url)
+                except:
+                    continue
 
                 url = i.url
+                print(url)
 
                 if (extensionStr in imageArr) and dict["I"] == True:
                     filename = str(image) + " " + msg.created_at.strftime('%d %b %y') + extensionStr
@@ -278,7 +213,7 @@ Parameter: Array of arguments
 Returns: Dictionary
 """         
 def parseArgs(args):
-    dict = {"I" : None, "V" : None, "S" : None, "E" : None, "T" : None}
+    dict = {"I" : True, "V" : True, "S" : None, "E" : datetime.datetime.today(), "T" : True}
     for par in args:
         if par[1] == "I":
             dict["I"] = True
@@ -295,8 +230,6 @@ def parseArgs(args):
             endDate = datetime.datetime(endArr[0], endArr[1], endArr[2])
             dict["E"] = endDate
     return dict
-
-
 
 bot.run("MTA5NDY5ODQ0NzkwMDI1NDI0MA.GJF1pn.sjfXhY0ZKluDXXatO6WVx-y364hT5SjlD_1mK4")
 
