@@ -222,9 +222,9 @@ async def getText(msg, channel, currImageList, currVideoList, parsedArgs, thread
         replies = reference.message_id
     id = msg.id
     thread_id = None
-    print(clean_content, thread)
+    #print(clean_content, thread)
     if (not thread and msg.channel.get_thread(id)):
-        print("Thread found")
+        #print("Thread found")
         async for message in msg.channel.get_thread(id).history(oldest_first = True):
             imageList = []
             videoList = []
