@@ -9,7 +9,7 @@ import os
 from discord.ext import commands
 
 #Setup
-setup = setup.setup()
+setup = records.setup()
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 imageArr = [".jpg", ".jpeg", ".png", ".webp"]
@@ -27,6 +27,9 @@ failedVideo = 0
 failedImages = ""
 failedVideos = ""
 
+imageList = []
+videoList = []
+
 datesDict = setup.readDates()
 
 #Creates starter directories and confirms bot launch
@@ -42,10 +45,9 @@ async def archiveDocs(ctx, *args):
     #print(parsedArgs)
     datesDict[channel] = parsedArgs["E"]
     set_directories(channel, channel + "/Images", channel + "/Videos")
-    with open(channel + "/Videos/failedVideos.txt", 'a') as f:
+    with open(channel + "messages.csv", 'a') as f:
         f.write("")  
-    with open(channel + "/Images/failedImages.txt", 'a') as f:
-        f.write("")  
+    
 
     global image
     global video
@@ -53,12 +55,17 @@ async def archiveDocs(ctx, *args):
     global failedImage
     global failedVideo
 
+    global imageList
+    global videoList
+
     failedImages = ""
     failedVideos = ""
 
     #Loops through each message sent in the channel
     #print(parsedArgs)
     async for message in ctx.channel.history(limit=None, before=parsedArgs["E"], after=parsedArgs["S"], around=None, oldest_first=True):
+        imageList = []
+        videoList = []
         #print(message.attachments, message.embeds)
         count += 1
 
@@ -69,14 +76,16 @@ async def archiveDocs(ctx, *args):
 
         if len(message.embeds) > 0:
             await getEmbeds(message, channel, parsedArgs)
+
+        await getText(message, channel, imageList, videoList, parsedArgs, False)
         
     #Give specs on saved files                    
     await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
     await message.channel.send("Saved " + str(image) + " images", delete_after=20.0)
     await message.channel.send(str(count) + " Messages were scanned", delete_after=20.0)  
 
-    await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
-    await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
+    #await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
+    #await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
 
     setup.writeDates(datesDict)
 
@@ -95,6 +104,9 @@ async def getAttachments(msg, channel, dict):
     global failedImage
     global failedVideo
 
+    global imageList
+    global videoList
+
     for i in msg.attachments:
             fileType = getFileType(i.filename)
 
@@ -103,6 +115,7 @@ async def getAttachments(msg, channel, dict):
                 try:
                     dirPath = channel + "/Images/"
                     await i.save(f'' + dirPath + filename)
+                    imageList.append(filename)
                     image += 1
                 except:
                     with open(channel + "/Images/failedImages.txt", 'a') as f:
@@ -115,6 +128,7 @@ async def getAttachments(msg, channel, dict):
                 try:
                     dirPath = channel + "/Videos/"
                     await i.save(f'' + dirPath + filename)
+                    videoList.append(filename)
                     video += 1
                 except:
                     with open(channel + "/Videos/failedVideos.txt", 'a') as f:
@@ -129,6 +143,9 @@ async def getEmbeds(msg, channel, dict):
     global count
     global failedImage
     global failedVideo
+
+    global imageList
+    global videoList
 
     for i in msg.embeds:
                     
@@ -149,6 +166,7 @@ async def getEmbeds(msg, channel, dict):
                         with open(dirPath + filename, 'wb') as f:
                             f.write(imageFile)
 
+                        imageList.append(filename)
                         image += 1
 
                     except Exception as error:
@@ -171,6 +189,7 @@ async def getEmbeds(msg, channel, dict):
                         with open(dirPath + filename, 'wb') as f:
                             f.write(videoFile)
 
+                        videoList.append(filename)
                         video += 1
 
                     except:
@@ -178,6 +197,52 @@ async def getEmbeds(msg, channel, dict):
                             f.write(filename + " - " + msg.jump_url + "\n")  
                         failedVideo += 1
                         continue
+
+"""
+Write text messages to messages.csv in the following form.
+datetime, author, contents, reference.id, 
+"""
+async def getText(msg, channel, currImageList, currVideoList, parsedArgs, thread):
+
+    global imageList
+    global videoList
+
+    created_at = msg.created_at
+    edited_at = msg.edited_at
+    author = msg.author
+    clean_content = msg.clean_content
+    reactions = msg.reactions
+    reactionsArr = []
+    for react in reactions:
+        reactionsArr.append([react.emoji,  react.count])
+    jump_url = msg.jump_url
+    reference = msg.reference
+    replies = None
+    if (reference):
+        replies = reference.message_id
+    id = msg.id
+    thread_id = None
+    print(clean_content, thread)
+    if (not thread and msg.channel.get_thread(id)):
+        print("Thread found")
+        async for message in msg.channel.get_thread(id).history(oldest_first = True):
+            imageList = []
+            videoList = []
+            await getAttachments(message, channel, parsedArgs)
+            await getEmbeds(message, channel, parsedArgs)
+            await getText(message, channel, imageList, videoList, parsedArgs, True)
+    elif thread:
+        thread_id = msg.channel.id
+    
+    messageArr = [created_at, edited_at, author, clean_content, currImageList, currVideoList, reactionsArr, jump_url, replies, id, thread_id]
+
+    stringArr = map(lambda x : str(x), messageArr)
+
+
+
+    with open (channel + "/messages.csv", 'a', encoding="utf-8") as f:
+        f.write(', '.join(stringArr) + "\n")
+    return
 
 """
 Checks for and creates directories with given Strings.
