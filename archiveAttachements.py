@@ -80,9 +80,9 @@ async def archiveDocs(ctx, *args):
         await getText(message, channel, imageList, videoList, parsedArgs, False)
         
     #Give specs on saved files                    
-    await message.channel.send("Saved " + str(video) + " videos", delete_after=20.0)
-    await message.channel.send("Saved " + str(image) + " images", delete_after=20.0)
-    await message.channel.send(str(count) + " Messages were scanned", delete_after=20.0)  
+    await message.channel.send("Saved " + str(video) + " videos", delete_after=5.0)
+    await message.channel.send("Saved " + str(image) + " images", delete_after=5.0)
+    await message.channel.send(str(count) + " Messages were scanned", delete_after=5.0)  
 
     #await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
     #await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
@@ -222,9 +222,9 @@ async def getText(msg, channel, currImageList, currVideoList, parsedArgs, thread
         replies = reference.message_id
     id = msg.id
     thread_id = None
-    print(clean_content, thread)
+    #print(clean_content, thread)
     if (not thread and msg.channel.get_thread(id)):
-        print("Thread found")
+        #print("Thread found")
         async for message in msg.channel.get_thread(id).history(oldest_first = True):
             imageList = []
             videoList = []
@@ -236,11 +236,9 @@ async def getText(msg, channel, currImageList, currVideoList, parsedArgs, thread
     
     messageArr = [created_at, edited_at, author, clean_content, currImageList, currVideoList, reactionsArr, jump_url, replies, id, thread_id]
 
-    stringArr = map(lambda x : str(x), messageArr)
+    stringArr = map(lambda x : str(x) + "\\null", messageArr)
 
-
-
-    with open (channel + "/messages.csv", 'a', encoding="utf-8") as f:
+    with open (channel + "/" + channel + "_messages.csv", 'a', encoding="utf-8") as f:
         f.write(', '.join(stringArr) + "\n")
     return
 
