@@ -5,6 +5,7 @@ import requests
 import urllib.request
 import datetime
 import os
+import dropbox
 
 from discord.ext import commands
 
@@ -297,5 +298,5 @@ def parseArgs(args, datesDict, channel):
             dict["E"] = endDate
     return dict
 
-bot.run("MTA5NDY5ODQ0NzkwMDI1NDI0MA.GJF1pn.sjfXhY0ZKluDXXatO6WVx-y364hT5SjlD_1mK4")
+bot.run("TOKEN HERE")
 
