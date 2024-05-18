@@ -11,6 +11,7 @@ from discord.ext import commands
 
 #Setup
 setup = records.setup()
+datesDict = setup.readDates()
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 imageArr = [".jpg", ".jpeg", ".png", ".webp"]
@@ -22,16 +23,12 @@ video = 0
 sound = 0
 
 count = 0
-failedImage = 0
-failedVideo = 0
 
 failedImages = ""
 failedVideos = ""
 
 imageList = []
 videoList = []
-
-datesDict = setup.readDates()
 
 #Creates starter directories and confirms bot launch
 @bot.event
@@ -41,20 +38,10 @@ async def on_ready():
 #Archive files out of the channel the command was sent in.
 @bot.command()
 async def archiveDocs(ctx, *args):
-    channel = ctx.channel.name
-    parsedArgs = parseArgs(args, datesDict, channel)
-    #print(parsedArgs)
-    datesDict[channel] = parsedArgs["E"]
-    set_directories(channel, channel + "/Images", channel + "/Videos")
-    with open(channel + "messages.csv", 'a') as f:
-        f.write("")  
-    
 
     global image
     global video
     global count
-    global failedImage
-    global failedVideo
 
     global imageList
     global videoList
@@ -62,12 +49,19 @@ async def archiveDocs(ctx, *args):
     failedImages = ""
     failedVideos = ""
 
-    #Loops through each message sent in the channel
+    channel = ctx.channel.name
+    parsedArgs = parseArgs(args, datesDict, channel)
     #print(parsedArgs)
-    async for message in ctx.channel.history(limit=None, before=parsedArgs["E"], after=parsedArgs["S"], around=None, oldest_first=True):
+    datesDict[channel] = parsedArgs["e"]
+
+    set_directories(channel, channel + "/Images", channel + "/Videos")
+    f = open(channel + "/messages.csv", 'a')
+    f.close()
+
+    #Loops through each message sent in the channel
+    async for message in ctx.channel.history(limit=None, before=parsedArgs["e"], after=parsedArgs["s"], around=None, oldest_first=True):
         imageList = []
         videoList = []
-        #print(message.attachments, message.embeds)
         count += 1
 
         #Loop through and save attachments
@@ -85,25 +79,13 @@ async def archiveDocs(ctx, *args):
     await message.channel.send("Saved " + str(image) + " images", delete_after=5.0)
     await message.channel.send(str(count) + " Messages were scanned", delete_after=5.0)  
 
-    #await message.channel.send(str(failedImage) + " Images Failed", delete_after=20.0) 
-    #await message.channel.send(str(failedVideo) + " Videos failed", delete_after=20.0)   
-
-    setup.writeDates(datesDict)
-
-    # with open(channel + "/Videos/failedVideos.txt", 'w') as f:
-    #     f.write(failedVideos)  
-
-    # with open(channel + "/Images/failedImages.txt", 'w') as f:
-    #     f.write(failedImages)     
+    setup.writeDates(datesDict)  
 
 async def getAttachments(msg, channel, dict):
-    #print("getting attachments")
 
     global image
     global video
     global count
-    global failedImage
-    global failedVideo
 
     global imageList
     global videoList
@@ -121,7 +103,6 @@ async def getAttachments(msg, channel, dict):
                 except:
                     with open(channel + "/Images/failedImages.txt", 'a') as f:
                         f.write(filename + " - " + msg.jump_url + "\n") 
-                    failedImage += 1
                     continue
 
             if fileType in videoArr and dict["V"] == True:
@@ -134,7 +115,6 @@ async def getAttachments(msg, channel, dict):
                 except:
                     with open(channel + "/Videos/failedVideos.txt", 'a') as f:
                         f.write(filename + " - " + msg.jump_url + "\n")  
-                    failedVideo += 1
                     continue
 
 async def getEmbeds(msg, channel, dict):
@@ -142,8 +122,6 @@ async def getEmbeds(msg, channel, dict):
     global image
     global video
     global count
-    global failedImage
-    global failedVideo
 
     global imageList
     global videoList
@@ -173,7 +151,6 @@ async def getEmbeds(msg, channel, dict):
                     except Exception as error:
                         with open(channel + "/Images/failedImages.txt", 'a') as f:
                             f.write(filename + " - " + msg.jump_url + "\n") 
-                        failedImage += 1
                         continue
 
                 if (extensionStr in videoArr) and dict["V"] == True:
@@ -196,7 +173,6 @@ async def getEmbeds(msg, channel, dict):
                     except:
                         with open(channel + "/Videos/failedVideos.txt", 'a') as f:
                             f.write(filename + " - " + msg.jump_url + "\n")  
-                        failedVideo += 1
                         continue
 
 """
@@ -267,35 +243,51 @@ def getFileType(filename):
 
 """
 Gives a dictionary containing arguments mapped to keys
-Parameter: Array of arguments (Dates of form '-EYYYY-MM-DD)
+Parameter: Array of arguments (Dates of form '-e YYYY-MM-DD')
+
+-e -> end date (default current day)
+-s -> start date (default date read from backupRecords.csv, if no date was read, Null)
+-n -> avoid filetypes/text (default Null) Parameters 'v', 'i', 'a', 't' for videos, images, audio, text.
+
 Returns: Dictionary
 """         
 def parseArgs(args, datesDict, channel):
-    #print("parsingArgs")
+
+    avoid = "-n" in args
+    start = "-s" in args
+    end = "-e" in args
+
     try:
         startArr = datesDict[channel].strip("0:").split("-")
         startDatetime = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
     except:
         startDatetime = None
-    dict = {"I" : True, "V" : True, "S" : startDatetime, "E" : datetime.datetime.today(), "T" : True}
-    for par in args:
-        #print(par)
-        if par[1] == "I":
-            dict["I"] = True
-        elif par[1] == "V":
-            dict["V"] = True
-        elif par[1] == "T":
-            dict["T"] = True
-        elif par[1] == "S":
-            startArr = par.strip("-S").split("-")
+    
+    dict = {"v" : True, "i" : True, "a" : True, "t" : True, "s" : startDatetime, "e" : datetime.datetime.today()}
+
+    for par in args[3:]:
+        if avoid:
+            match par:
+                case 'v':
+                    dict["v"] = False
+                case 'i':
+                    dict["i"] = False
+                case 'a':
+                    dict["a"] = False
+                case 't':
+                    dict["t"] = False
+
+        if len(par) == 10 and start:
+            startArr = par.split("-")
             startDate = datetime.datetime(int(startArr[0]), int(startArr[1]), int(startArr[2]))
-            dict["S"] = startDate
-        elif par[1] == "E":
-            endArr = par.strip("-E").split("-")
-            #print(endArr)
+            dict["s"] = startDate
+            start = False
+
+        elif len(par) == 10 and end:
+            endArr = par.split("-")
             endDate = datetime.datetime(int(endArr[0]), int(endArr[1]), int(endArr[2]))
-            #print(endDate)
-            dict["E"] = endDate
+            dict["e"] = endDate
+
     return dict
 
 bot.run("TOKEN HERE")

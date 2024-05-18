@@ -28,5 +28,3 @@ class setup:
             for key in datesDict.keys():
                 write_file.write(key + ", " + str(datesDict[key]) + "\n")
         return
-    
-setup.readDates(setup)

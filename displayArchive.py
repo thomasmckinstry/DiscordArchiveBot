@@ -86,6 +86,4 @@ def displayArchive():
     c1.grid(row=0, column=1)
     mainloop()
 
-#Demo
-testmessages = pullRecords("testmessages")  
-print(testmessages.toString())
+displayArchive()
